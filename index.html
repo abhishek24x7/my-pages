@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: auto;
+        }
+
+        .dashboard {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .card .change {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .positive { color: #27ae60; }
+        .negative { color: #e74c3c; }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-card h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.2rem;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+
+        .data-table {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .table-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .sector-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-cards {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>My Investment Portfolio</h1>
+            <p>Real-time Investment Tracking Dashboard</p>
+        </div>
+
+        <div class="summary-cards" id="summaryCards">
+            <div class="card">
+                <h3>Total Investment</h3>
+                <div class="amount" id="totalInvestment">₹0</div>
+            </div>
+            <div class="card">
+                <h3>Current Value</h3>
+                <div class="amount" id="currentValue">₹0</div>
+            </div>
+            <div class="card">
+                <h3>Total P&L</h3>
+                <div class="amount" id="totalPL">₹0</div>
+                <div class="change" id="totalPLPercent">0%</div>
+            </div>
+            <div class="card">
+                <h3>Best Performer</h3>
+                <div class="amount" id="bestPerformer">-</div>
+                <div class="change positive" id="bestPerformerGain">0%</div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="showCategory('all')">All Assets</button>
+            <button class="filter-btn" onclick="showCategory('equity')">Indian Equity</button>
+            <button class="filter-btn" onclick="showCategory('us_stocks')">US Stocks</button>
+            <button class="filter-btn" onclick="showCategory('mutual_funds')">Mutual Funds</button>
+            <button class="filter-btn" onclick="showCategory('debt')">Debt & Others</button>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>Asset Allocation</h3>
+                <canvas id="allocationChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Performance Overview</h3>
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="data-table">
+            <div class="table-header">
+                <h3>Detailed Holdings</h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table id="holdingsTable">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Type</th>
+                            <th>Sector</th>
+                            <th>Invested</th>
+                            <th>Current Value</th>
+                            <th>P&L</th>
+                            <th>P&L %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Investment data compiled from your PDFs
+        const investmentData = {
+            equity: [
+                {name: "AXISBANK", sector: "Financial Services", shares: 92, price: 1140, avgPrice: 977.78, type: "Equity"},
+                {name: "BAJFINANCE", sector: "Financial Services", shares: 145, price: 994, avgPrice: 712.73, type: "Equity"},
+                {name: "BRITANNIA", sector: "FMCG", shares: 12, price: 6083.50, avgPrice: 4507.14, type: "Equity"},
+                {name: "DEEPAKNTR", sector: "Chemicals", shares: 15, price: 1815, avgPrice: 2092.76, type: "Equity"},
+                {name: "DIVISLAB", sector: "Healthcare", shares: 19, price: 6200, avgPrice: 4159.64, type: "Equity"},
+                {name: "EICHERMOT", sector: "Auto", shares: 21, price: 6980.50, avgPrice: 3917.05, type: "Equity"},
+                {name: "EQUITASBNK", sector: "Financial Services", shares: 505, price: 56.20, avgPrice: 63.32, type: "Equity"},
+                {name: "ETERNAL", sector: "Retail", shares: 180, price: 337.65, avgPrice: 134.59, type: "Equity"},
+                {name: "HDFCBANK", sector: "Financial Services", shares: 124, price: 967, avgPrice: 792.04, type: "Equity"},
+                {name: "HINDUNILVR", sector: "FMCG", shares: 30, price: 2564, avgPrice: 2423.90, type: "Equity"},
+                {name: "ICICIBANK", sector: "Financial Services", shares: 72, price: 1402.50, avgPrice: 1046.32, type: "Equity"},
+                {name: "INFOSYS", sector: "IT", shares: 40, price: 1543.90, avgPrice: 1667.62, type: "Equity"},
+                {name: "ITC", sector: "FMCG", shares: 174, price: 410, avgPrice: 384.50, type: "Equity"},
+                {name: "LALPATHLAB", sector: "Healthcare", shares: 18, price: 3422, avgPrice: 2429.06, type: "Equity"},
+                {name: "LTIM", sector: "IT", shares: 13, price: 5521, avgPrice: 4956.77, type: "Equity"},
+                {name: "NAUKRI", sector: "IT", shares: 62, price: 1378.80, avgPrice: 1048.23, type: "Equity"},
+                {name: "NESTLEIND", sector: "FMCG", shares: 48, price: 1197.50, avgPrice: 1051.31, type: "Equity"},
+                {name: "NHPC", sector: "Energy", shares: 534, price: 88, avgPrice: 63.48, type: "Equity"},
+                {name: "PIDILITIND", sector: "Chemicals", shares: 23, price: 3060, avgPrice: 2527.27, type: "Equity"},
+                {name: "POLYCAB", sector: "Capital Goods", shares: 15, price: 7554, avgPrice: 4632.94, type: "Equity"},
+                {name: "TATAPOWER", sector: "Energy", shares: 102, price: 396.50, avgPrice: 307.11, type: "Equity"},
+                {name: "TCS", sector: "IT", shares: 20, price: 3171, avgPrice: 3506.13, type: "Equity"},
+                {name: "TITAN", sector: "Retail", shares: 34, price: 3470, avgPrice: 2884.10, type: "Equity"},
+                {name: "VMART", sector: "Retail", shares: 63, price: 736.25, avgPrice: 573.21, type: "Equity"}
+            ],
+            mutualFunds: [
+                {name: "CANARA ROBECO LARGE CAP", type: "Large Cap", quantity: 5236.571, nav: 73.05, avgPrice: 57.8785, unrealizedPL: 79446.43},
+                {name: "DSP ELSS TAX SAVER", type: "ELSS", quantity: 1822.986, nav: 153.746, avgPrice: 72.6805, unrealizedPL: 147781.31},
+                {name: "DSP NIFTY 50 EQUAL WEIGHT", type: "Index", quantity: 21101.365, nav: 26.6766, avgPrice: 19.2395, unrealizedPL: 156932.47},
+                {name: "HDFC BALANCED ADVANTAGE", type: "Hybrid", quantity: 715.436, nav: 559.175, avgPrice: 537.5473, unrealizedPL: 15473.26},
+                {name: "HSBC SMALL CAP", type: "Small Cap", quantity: 10462.204, nav: 90.4204, avgPrice: 52.759, unrealizedPL: 394021.10},
+                {name: "ICICI PRUDENTIAL BSE SENSEX", type: "Index", quantity: 12630.36, nav: 27.0327, avgPrice: 21.9144, unrealizedPL: 64646.43},
+                {name: "MIRAE ASSET LARGE & MIDCAP", type: "Large & Mid Cap", quantity: 1044.976, nav: 170.017, avgPrice: 144.4936, unrealizedPL: 26671.33},
+                {name: "QUANT SMALL CAP", type: "Small Cap", quantity: 2225.938, nav: 276.6816, avgPrice: 203.7247, unrealizedPL: 162397.54},
+                {name: "SBI LARGE CAP", type: "Large Cap", quantity: 5918.559, nav: 102.8604, avgPrice: 68.0036, unrealizedPL: 206302.17},
+                {name: "TATA ELSS", type: "ELSS", quantity: 5052.286, nav: 50.471, avgPrice: 26.6207, unrealizedPL: 120498.38}
+            ],
+            usStocks: [
+                {name: "QQQ", fullName: "Invesco QQQ Trust", sector: "ETF", shares: 1.9828, price: 52797.82, avgPrice: 32340.26, type: "US Stock"},
+                {name: "AMZN", fullName: "Amazon.com Inc", sector: "Technology", shares: 2.7373, price: 20391.49, avgPrice: 12445.61, type: "US Stock"},
+                {name: "AAPL", fullName: "Apple Inc", sector: "Technology", shares: 2.1933, price: 21626.54, avgPrice: 15614.27, type: "US Stock"},
+                {name: "MSFT", fullName: "Microsoft Corp", sector: "Technology", shares: 1.2531, price: 45625.39, avgPrice: 28460.70, type: "US Stock"},
+                {name: "GOOGL", fullName: "Alphabet Inc Class A", sector: "Technology", shares: 3.0856, price: 22438.74, avgPrice: 11316.27, type: "US Stock"},
+                {name: "TSLA", fullName: "Tesla Inc", sector: "Auto", shares: 1.5705, price: 37533.27, avgPrice: 18582.97, type: "US Stock"},
+                {name: "UNH", fullName: "UnitedHealth Group Inc", sector: "Healthcare", shares: 4.6362, price: 29659.63, avgPrice: 17647.26, type: "US Stock"}, // Combined both UNH positions
+                {name: "SHOP", fullName: "Shopify Inc", sector: "Technology", shares: 4.6622, price: 13504.47, avgPrice: 5604.40, type: "US Stock"}
+            ],
+            otherInvestments: [
+                {name: "NPS", type: "Debt", invested: 320000, current: 488000},
+                {name: "LIC", type: "Debt", invested: 560000, current: 1000000},
+                {name: "SUKANYA", type: "Debt", invested: 100000, current: 150000},
+                {name: "EPF", type: "Debt", invested: 2000000, current: 2500000},
+                {name: "EPS", type: "Debt", invested: 182000, current: 182000},
+                {name: "FIX DEPOSIT", type: "Debt", invested: 2400000, current: 3100000},
+                {name: "GRATUITY", type: "Debt", invested: 800000, current: 1200000},
+                {name: "GOLD JEWELLERY", type: "Gold", invested: 1190000, current: 2300000},
+                {name: "SAVING A/C", type: "Debt", invested: 600000, current: 660000}
+            ]
+        };
+
+        let allocationChart = null;
+        let performanceChart = null;
+        let currentFilter = 'all';
+
+        function calculatePortfolioSummary() {
+            let totalInvested = 0;
+            let totalCurrent = 0;
+            let bestPerformer = {name: '', gain: 0};
+
+            // Calculate equity values
+            investmentData.equity.forEach(stock => {
+                const invested = stock.shares * stock.avgPrice;
+                const current = stock.shares * stock.price;
+                const gain = ((current - invested) / invested) * 100;
+                
+                totalInvested += invested;
+                totalCurrent += current;
+                
+                if (gain > bestPerformer.gain) {
+                    bestPerformer = {name: stock.name, gain: gain};
+                }
+            });
+
+            // Calculate US stocks values
+            investmentData.usStocks.forEach(stock => {
+                const invested = stock.shares * stock.avgPrice;
+                const current = stock.shares * stock.price;
+                const gain = ((current - invested) / invested) * 100;
+                
+                totalInvested += invested;
+                totalCurrent += current;
+                
+                if (gain > bestPerformer.gain) {
+                    bestPerformer = {name: stock.name, gain: gain};
+                }
+            });
+
+            // Calculate mutual fund values
+            investmentData.mutualFunds.forEach(fund => {
+                const invested = fund.quantity * fund.avgPrice;
+                const current = fund.quantity * fund.nav;
+                const gain = ((current - invested) / invested) * 100;
+                
+                totalInvested += invested;
+                totalCurrent += current;
+                
+                if (gain > bestPerformer.gain) {
+                    bestPerformer = {name: fund.name, gain: gain};
+                }
+            });
+
+            // Calculate other investments
+            investmentData.otherInvestments.forEach(investment => {
+                totalInvested += investment.invested;
+                totalCurrent += investment.current;
+                
+                const gain = ((investment.current - investment.invested) / investment.invested) * 100;
+                if (gain > bestPerformer.gain) {
+                    bestPerformer = {name: investment.name, gain: gain};
+                }
+            });
+
+            const totalPL = totalCurrent - totalInvested;
+            const totalPLPercent = ((totalPL / totalInvested) * 100);
+
+            return {
+                totalInvested,
+                totalCurrent,
+                totalPL,
+                totalPLPercent,
+                bestPerformer
+            };
+        }
+
+        function updateSummaryCards() {
+            const summary = calculatePortfolioSummary();
+            
+            document.getElementById('totalInvestment').textContent = `₹${(summary.totalInvested / 100000).toFixed(1)}L`;
+            document.getElementById('currentValue').textContent = `₹${(summary.totalCurrent / 100000).toFixed(1)}L`;
+            document.getElementById('totalPL').textContent = `₹${(summary.totalPL / 100000).toFixed(1)}L`;
+            document.getElementById('totalPLPercent').textContent = `${summary.totalPLPercent.toFixed(1)}%`;
+            document.getElementById('totalPLPercent').className = `change ${summary.totalPL >= 0 ? 'positive' : 'negative'}`;
+            
+            document.getElementById('bestPerformer').textContent = summary.bestPerformer.name || '-';
+            document.getElementById('bestPerformerGain').textContent = `+${summary.bestPerformer.gain.toFixed(1)}%`;
+        }
+
+        function createAllocationChart() {
+            const ctx = document.getElementById('allocationChart').getContext('2d');
+            
+            let equityValue = 0;
+            let usStocksValue = 0;
+            let mutualFundValue = 0;
+            let debtValue = 0;
+            let goldValue = 0;
+
+            // Calculate equity total
+            investmentData.equity.forEach(stock => {
+                equityValue += stock.shares * stock.price;
+            });
+
+            // Calculate US stocks total
+            investmentData.usStocks.forEach(stock => {
+                usStocksValue += stock.shares * stock.price;
+            });
+
+            // Calculate mutual fund total
+            investmentData.mutualFunds.forEach(fund => {
+                mutualFundValue += fund.quantity * fund.nav;
+            });
+
+            // Calculate other investments
+            investmentData.otherInvestments.forEach(investment => {
+                if (investment.type === 'Gold') {
+                    goldValue += investment.current;
+                } else {
+                    debtValue += investment.current;
+                }
+            });
+
+            if (allocationChart) {
+                allocationChart.destroy();
+            }
+
+            allocationChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Indian Equity', 'US Stocks', 'Mutual Funds', 'Debt & Others', 'Gold'],
+                    datasets: [{
+                        data: [equityValue, usStocksValue, mutualFundValue, debtValue, goldValue],
+                        backgroundColor: [
+                            '#3498db',
+                            '#9b59b6',
+                            '#e74c3c',
+                            '#f39c12',
+                            '#f1c40f'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPerformanceChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            const topPerformers = [];
+            
+            // Get top equity performers
+            investmentData.equity.forEach(stock => {
+                const invested = stock.shares * stock.avgPrice;
+                const current = stock.shares * stock.price;
+                const gain = ((current - invested) / invested) * 100;
+                topPerformers.push({name: stock.name, gain: gain});
+            });
+
+            // Get top US stock performers
+            investmentData.usStocks.forEach(stock => {
+                const invested = stock.shares * stock.avgPrice;
+                const current = stock.shares * stock.price;
+                const gain = ((current - invested) / invested) * 100;
+                topPerformers.push({name: stock.name, gain: gain});
+            });
+
+            // Get top mutual fund performers
+            investmentData.mutualFunds.forEach(fund => {
+                const invested = fund.quantity * fund.avgPrice;
+                const current = fund.quantity * fund.nav;
+                const gain = ((current - invested) / invested) * 100;
+                topPerformers.push({name: fund.name.split(' ')[0], gain: gain});
+            });
+
+            // Sort and get top 10
+            topPerformers.sort((a, b) => b.gain - a.gain);
+            const top10 = topPerformers.slice(0, 10);
+
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            performanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: top10.map(item => item.name),
+                    datasets: [{
+                        label: 'Returns %',
+                        data: top10.map(item => item.gain),
+                        backgroundColor: top10.map(item => item.gain >= 0 ? '#27ae60' : '#e74c3c'),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function getSectorColor(sector) {
+            const colors = {
+                'Financial Services': '#3498db',
+                'IT': '#9b59b6',
+                'FMCG': '#e74c3c',
+                'Healthcare': '#2ecc71',
+                'Auto': '#f39c12',
+                'Energy': '#e67e22',
+                'Chemicals': '#34495e',
+                'Retail': '#1abc9c',
+                'Capital Goods': '#95a5a6',
+                'Large Cap': '#3498db',
+                'Small Cap': '#e74c3c',
+                'ELSS': '#2ecc71',
+                'Index': '#f39c12',
+                'Hybrid': '#9b59b6',
+                'Debt': '#7f8c8d',
+                'Gold': '#f1c40f'
+            };
+            return colors[sector] || '#bdc3c7';
+        }
+
+        function populateTable() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            let allData = [];
+            
+            if (currentFilter === 'all' || currentFilter === 'equity') {
+                investmentData.equity.forEach(stock => {
+                    const invested = stock.shares * stock.avgPrice;
+                    const current = stock.shares * stock.price;
+                    const pl = current - invested;
+                    const plPercent = ((pl / invested) * 100);
+                    
+                    allData.push({
+                        name: stock.name,
+                        type: 'Indian Equity',
+                        sector: stock.sector,
+                        invested: invested,
+                        current: current,
+                        pl: pl,
+                        plPercent: plPercent,
+                        category: 'equity'
+                    });
+                });
+            }
+
+            if (currentFilter === 'all' || currentFilter === 'us_stocks') {
+                investmentData.usStocks.forEach(stock => {
+                    const invested = stock.shares * stock.avgPrice;
+                    const current = stock.shares * stock.price;
+                    const pl = current - invested;
+                    const plPercent = ((pl / invested) * 100);
+                    
+                    allData.push({
+                        name: stock.name,
+                        type: 'US Stock',
+                        sector: stock.sector,
+                        invested: invested,
+                        current: current,
+                        pl: pl,
+                        plPercent: plPercent,
+                        category: 'us_stocks'
+                    });
+                });
+            }
+            
+            if (currentFilter === 'all' || currentFilter === 'mutual_funds') {
+                investmentData.mutualFunds.forEach(fund => {
+                    const invested = fund.quantity * fund.avgPrice;
+                    const current = fund.quantity * fund.nav;
+                    const pl = current - invested;
+                    const plPercent = ((pl / invested) * 100);
+                    
+                    allData.push({
+                        name: fund.name,
+                        type: fund.type,
+                        sector: 'Mutual Fund',
+                        invested: invested,
+                        current: current,
+                        pl: pl,
+                        plPercent: plPercent,
+                        category: 'mutual_funds'
+                    });
+                });
+            }
+            
+            if (currentFilter === 'all' || currentFilter === 'debt') {
+                investmentData.otherInvestments.forEach(investment => {
+                    const pl = investment.current - investment.invested;
+                    const plPercent = ((pl / investment.invested) * 100);
+                    
+                    allData.push({
+                        name: investment.name,
+                        type: investment.type,
+                        sector: investment.type,
+                        invested: investment.invested,
+                        current: investment.current,
+                        pl: pl,
+                        plPercent: plPercent,
+                        category: 'debt'
+                    });
+                });
+            }
+            
+            // Sort by current value descending
+            allData.sort((a, b) => b.current - a.current);
+            
+            allData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${item.name}</strong></td>
+                    <td><span class="sector-tag" style="background-color: ${getSectorColor(item.type)}">${item.type}</span></td>
+                    <td><span class="sector-tag" style="background-color: ${getSectorColor(item.sector)}">${item.sector}</span></td>
+                    <td>₹${(item.invested / 1000).toFixed(0)}K</td>
+                    <td>₹${(item.current / 1000).toFixed(0)}K</td>
+                    <td class="${item.pl >= 0 ? 'positive' : 'negative'}">₹${(item.pl / 1000).toFixed(0)}K</td>
+                    <td class="${item.plPercent >= 0 ? 'positive' : 'negative'}">${item.plPercent.toFixed(1)}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function showCategory(category) {
+            currentFilter = category;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            populateTable();
+        }
+
+        // Initialize dashboard
+        function initDashboard() {
+            updateSummaryCards();
+            createAllocationChart();
+            createPerformanceChart();
+            populateTable();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
+        // Make showCategory available globally
+        window.showCategory = showCategory;
+    </script>
+</body>
+</html>
